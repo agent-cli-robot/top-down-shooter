@@ -40,9 +40,8 @@ export default function TopDownShooter() {
   const [doorPrompt, setDoorPrompt] = useState<DoorPrompt>(null)
   const [minimapUpdate, setMinimapUpdate] = useState(0)
   const [controllerConnected, setControllerConnected] = useState(false) // Track controller connection
-  const [selectedMenuButton, setSelectedMenuButton] = useState(0) // 0 = Start Game, 1 = Settings, 2 = Difficulty Selection
+  const [selectedMenuButton, setSelectedMenuButton] = useState(0) // 0 = Start Game, 1 = Settings
   const [selectedSettingsButton, setSelectedSettingsButton] = useState(0) // For settings close button
-  const [showDifficultySelection, setShowDifficultySelection] = useState(false) // Show difficulty selection screen
   const [reloadPrompt, setReloadPrompt] = useState(false) // Added reload prompt state
   const [audioSettings, setAudioSettings] = useState({
     musicVolume: 0.1, // 10% default
@@ -64,32 +63,22 @@ export default function TopDownShooter() {
         if (inputManager.isKeyPressed("Enter") || inputManager.isKeyPressed("Space")) {
           setShowSettings(false)
         }
-      } else if (showDifficultySelection) {
-        // Difficulty selection navigation
-        if (inputManager.isKeyPressed("ArrowLeft")) {
-          if (selectedDifficulty === 'hard') setSelectedDifficulty('medium');
-          else if (selectedDifficulty === 'medium') setSelectedDifficulty('easy');
-        } else if (inputManager.isKeyPressed("ArrowRight")) {
-          if (selectedDifficulty === 'easy') setSelectedDifficulty('medium');
-          else if (selectedDifficulty === 'medium') setSelectedDifficulty('hard');
-        } else if (inputManager.isKeyPressed("Enter") || inputManager.isKeyPressed("Space")) {
-          startGame(); // Start the game with selected difficulty
-          setShowDifficultySelection(false);
-        } else if (inputManager.isKeyPressed("Escape")) {
-          setShowDifficultySelection(false); // Go back to main menu
-        }
       } else {
         // Main menu navigation
-        if (inputManager.isKeyPressed("ArrowUp")) {
+        if (inputManager.isKeyPressed("ArrowLeft") && !showSettings) {
+          if (selectedDifficulty === 'hard') setSelectedDifficulty('medium');
+          else if (selectedDifficulty === 'medium') setSelectedDifficulty('easy');
+        } else if (inputManager.isKeyPressed("ArrowRight") && !showSettings) {
+          if (selectedDifficulty === 'easy') setSelectedDifficulty('medium');
+          else if (selectedDifficulty === 'medium') setSelectedDifficulty('hard');
+        } else if (inputManager.isKeyPressed("ArrowUp") && !showSettings) {
           setSelectedMenuButton((prev) => Math.max(0, prev - 1))
-        } else if (inputManager.isKeyPressed("ArrowDown")) {
-          setSelectedMenuButton((prev) => Math.min(2, prev + 1)) // Now 0-2 for Start, Difficulty, Settings
+        } else if (inputManager.isKeyPressed("ArrowDown") && !showSettings) {
+          setSelectedMenuButton((prev) => Math.min(1, prev + 1)) // Now 0-1 for Start, Settings
         } else if (inputManager.isKeyPressed("Enter") || inputManager.isKeyPressed("Space")) {
           if (selectedMenuButton === 0) {
             startGame() // Start with current difficulty
           } else if (selectedMenuButton === 1) {
-            setShowDifficultySelection(true) // Show difficulty selection
-          } else {
             setShowSettings(true) // Settings
           }
         }
@@ -101,7 +90,7 @@ export default function TopDownShooter() {
     return () => {
       clearInterval(menuInterval)
     }
-  }, [gameStarted, showSettings, showDifficultySelection, selectedMenuButton, selectedDifficulty])
+  }, [gameStarted, showSettings, selectedMenuButton, selectedDifficulty])
 
   useEffect(() => {
     const handleGamepadConnected = (e: GamepadEvent) => {
@@ -228,29 +217,47 @@ export default function TopDownShooter() {
               Controller: Left Stick - Move, Right Stick - Aim, RT - Shoot, A - Interact, Y - Switch Weapon
             </p>
           </div>
+          
+          {/* Difficulty Selector */}
+          <div className="mb-8">
+            <h2 className="mb-4 font-mono text-xl font-bold text-primary">SELECT DIFFICULTY</h2>
+            <div className="flex justify-center space-x-4 mb-6">
+              {(['easy', 'medium', 'hard'] as const).map((diff) => (
+                <button
+                  key={diff}
+                  onClick={() => setSelectedDifficulty(diff)}
+                  className={`px-6 py-3 font-mono text-lg transition-all ${
+                    selectedDifficulty === diff
+                      ? 'bg-primary text-primary-foreground scale-105 ring-2 ring-primary/50'
+                      : 'border-2 border-primary text-primary hover:bg-primary/10 hover:scale-105'
+                  }`}
+                >
+                  {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                </button>
+              ))}
+            </div>
+            <div className="text-sm text-muted-foreground max-w-2xl mx-auto">
+              <p className="mb-1"><span className="font-bold">Easy:</span> Enemies move normally with basic pathfinding</p>
+              <p className="mb-1"><span className="font-bold">Medium:</span> Enemies have 30% chance to use advanced collision avoidance</p>
+              <p className="mb-1"><span className="font-bold">Hard:</span> Enemies always use advanced navigation and avoid overlapping</p>
+            </div>
+          </div>
+          
           <div className="flex flex-col items-center gap-4">
             <button
               onClick={startGame}
               className={`px-8 py-4 font-mono text-xl font-bold transition-all ${
                 selectedMenuButton === 0
                   ? "scale-110 bg-primary text-primary-foreground ring-4 ring-primary/50"
-                  : "bg-primary text-primary-foreground hover:bg-primary/80"
+                  : "bg-primary text-primary-foreground hover:bg-primary/80 hover:scale-105"
               }`}
             >
               START GAME
             </button>
             <button
-              onClick={() => setShowDifficultySelection(true)}
-              className={`border-2 border-primary bg-transparent px-8 py-4 font-mono text-xl font-bold text-primary transition-all ${
-                selectedMenuButton === 1 ? "scale-110 bg-primary/20 ring-4 ring-primary/50" : "hover:bg-primary/10"
-              }`}
-            >
-              SELECT DIFFICULTY
-            </button>
-            <button
               onClick={() => setShowSettings(true)}
               className={`border-2 border-primary bg-transparent px-8 py-4 font-mono text-xl font-bold text-primary transition-all ${
-                selectedMenuButton === 2 ? "scale-110 bg-primary/20 ring-4 ring-primary/50" : "hover:bg-primary/10"
+                selectedMenuButton === 1 ? "scale-110 bg-primary/20 ring-4 ring-primary/50 hover:bg-primary/10" : "hover:bg-primary/10 hover:scale-105"
               }`}
             >
               SETTINGS
@@ -302,50 +309,7 @@ export default function TopDownShooter() {
         </>
       )}
 
-      {showDifficultySelection && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/95">
-          <div className="w-full max-w-md rounded-lg border-2 border-primary bg-card p-8 text-center">
-            <h2 className="mb-8 font-mono text-3xl font-bold text-primary">SELECT DIFFICULTY</h2>
-            <div className="mb-8">
-              <div className="flex justify-center space-x-4 mb-6">
-                {(['easy', 'medium', 'hard'] as const).map((diff) => (
-                  <button
-                    key={diff}
-                    onClick={() => setSelectedDifficulty(diff)}
-                    className={`px-6 py-3 font-mono text-lg ${
-                      selectedDifficulty === diff
-                        ? 'bg-primary text-primary-foreground'
-                        : 'border-2 border-primary text-primary hover:bg-primary/10'
-                    }`}
-                  >
-                    {diff.charAt(0).toUpperCase() + diff.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="text-left text-sm text-muted-foreground space-y-2">
-                <p><span className="font-bold">Easy:</span> Enemies move normally with basic pathfinding</p>
-                <p><span className="font-bold">Medium:</span> Enemies have 30% chance to use advanced collision avoidance</p>
-                <p><span className="font-bold">Hard:</span> Enemies always use advanced navigation and avoid overlapping</p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                startGame();
-                setShowDifficultySelection(false);
-              }}
-              className="w-full bg-primary px-6 py-3 font-mono text-lg font-bold text-primary-foreground transition-all hover:bg-primary/80"
-            >
-              START GAME
-            </button>
-            <button
-              onClick={() => setShowDifficultySelection(false)}
-              className="mt-4 w-full border-2 border-primary bg-transparent px-6 py-3 font-mono text-lg font-bold text-primary transition-all hover:bg-primary/10"
-            >
-              BACK
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {showSettings && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/95">
